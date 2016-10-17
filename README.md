@@ -46,21 +46,24 @@ If you want to look at a different year or different jurisdictions, you can chan
 
 ### Change the year
 
-We retrieve the UCR by year in lines 23-26 of the `Makefile`:
+We retrieve the UCR by year in lines 24-26 of the `Makefile`:
 
-`# get UCR report for 2014-15
+```
 .INTERMEDIATE: CrimeData_15_14.xlsx
 CrimeData_15_14.xlsx :
-    wget http://www.isp.state.il.us/docs/cii/cii15/ds/CrimeData_15_14.xlsx`
+    wget http://www.isp.state.il.us/docs/cii/cii15/ds/CrimeData_15_14.xlsx
+```
 
 To work with data from a different year, find its corresponding UCR at the [State Police website](http://www.isp.state.il.us/crime/ucrhome.cfm) and substitute the URL in line 26 before you run `make`.
 
 ### Change the location
 
-We specify places of interest in the file `places.csv`. In lines 57-59 of `Makefile`, we use those locations to query the database via the script `ucr_places.py`: 
+We specify places of interest in the file `places.csv`. In line 59 of `Makefile`, we use those locations to query the database via the script `ucr_places.py`: 
 
-`output/suburb_crimes.csv : places.csv ucr_crime illinois_crosswalk identifiers_crosswalk
+```
+output/suburb_crimes.csv : places.csv ucr_crime illinois_crosswalk identifiers_crosswalk
     mkdir -p output
-    cat $< | python scripts/ucr_places.py $(PG_DB) > $@`
+    cat places.csv | python scripts/ucr_places.py $(PG_DB) > output/suburb
+```
 
 To work with different places, simply change `places.csv` to include only the places you're interested in before you run `make`. Make sure to follow the same schema (first column: placename, second column: FIPS code) so that `ucr_places.py` works properly. 
