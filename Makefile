@@ -13,8 +13,8 @@ PG_DB = illinois_ucr
 CHECK_RELATION = psql -d $(PG_DB) -c "\d $@" > /dev/null 2>&1
 
 .PHONY: databases suburb_crimes
-databases : ucr_crime illinois_crosswalk identifiers_crosswalk
-suburb_crimes : output/suburb_crimes.csv
+database : ucr_crime illinois_crosswalk identifiers_crosswalk
+crimes : output/suburb_crimes.csv
 
 # -----------------------------------------
 # Pull crime data for Illinois
