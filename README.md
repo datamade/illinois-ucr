@@ -1,7 +1,7 @@
-Simpler Illinois Crime Reports
+Working with Illinois Crime Reports
 ==============================
 
-The Illinois State Police releases state-wide crime data in its [Uniform Crime Reports](http://www.isp.state.il.us/crime/ucrhome.cfm) (UCRs), but those reports aren't always easy to work with. If you wanted to take a list of relevant places in Illinois and find their crime statistics in a UCR, for example, you'd have to jump through a lot of hoops to match across differently formatted police jurisdictions. This database removes most of those hoops.
+The Illinois State Police releases state-wide crime data in its [Uniform Crime Reports](http://www.isp.state.il.us/crime/ucrhome.cfm) (UCRs), but those reports aren't always easy to work with. Most pressingly, the UCRs don't include unique IDs for each police jurisdiction, so it can be a pain to join them with different tables (say, to filter by a list of specific jurisdictions that you're interested in). This repo builds a [PostgreSQL database](http://www.postgresql.org/) with UCR data for 2014 and 2015, along with comprehensive [crosswalks](https://en.wikipedia.org/wiki/Schema_crosswalk) for querying by police jurisdiction.
 
 ## Installation
 
@@ -28,25 +28,57 @@ pip install csvkit
 
 ## Making the database
 
-Start by generating a Postgres database in the command line:
+Start by creating a Postgres database in the command line:
 
-`createdb illinois_ucr`
+```
+createdb illinois_ucr
+```
 
-We made this database specifically to get information about crimes in Chicago suburbs in 2014 and 2015. To generate that data as a CSV file, run:
+Then use `make` to generate the tables:
 
-`make crimes`
+```
+make database
+```
 
-To just make the underlying database for every jurisdiction in Illinois:
+## Using the database
 
-`make database`
+Once `make` finishes, take a look at your database by running `psql -d illinois_ucr -c "\d"`. You should see three tables:
 
-## Changing year or location
+```
+                   List of relations
+ Schema |         Name          | Type  |    Owner
+--------+-----------------------+-------+--------------
+ public | identifiers_crosswalk | table | <user>
+ public | illinois_crosswalk    | table | <user>
+ public | ucr_crime             | table | <user>
+(3 rows)
+```
 
-If you want to look at a different year or different jurisdictions, you can change a few lines of our code and run either of the above commands.
+- `ucr_crime` is the State Police 2014-15 crime report. It includes crimes organized by county as well as by police agency.
+- `identifiers_crosswalk` is a master directory of police agencies across the United States. It can be filtered for Illinois using the `STATENAME` variable. (Full documentation of the crosswalk is available in the `documentation` directory.)
+- `illinois_crosswalk` is a table that matches agency names between `identifiers_crosswalk` and `ucr_crime`. We built it using [Dedupe](https://dedupe.io/). 
 
-### Change the year
+### Sample query
 
-We retrieve the UCR by year in lines 24-26 of the `Makefile`:
+For an example of using these tables for queries, see `scripts/sample_query.py`. The query in that script looks something like this:
+
+```
+SELECT (foo, bar, baz)
+FROM identifiers_crosswalk
+INNER JOIN illinois_crosswalk
+USING ("NAME", "COUNTYNAME")
+LEFT JOIN ucr_crime
+USING ("Agency", "County")
+WHERE "STATENAME" = 'ILLINOIS'
+AND "FPLACE" = '{}'
+GROUP BY "FPLACE"
+```
+
+Here, $FPLACE represents the jurisdictions we were interested in for one particular project.
+
+## Can I see reports for a different year?
+
+Possibly! We retrieve the UCR for 2014-15 in lines 24-26 of the `Makefile`:
 
 ```
 .INTERMEDIATE: CrimeData_15_14.xlsx
@@ -54,16 +86,4 @@ CrimeData_15_14.xlsx :
     wget http://www.isp.state.il.us/docs/cii/cii15/ds/CrimeData_15_14.xlsx
 ```
 
-To work with data from a different year, find its corresponding UCR at the [State Police website](http://www.isp.state.il.us/crime/ucrhome.cfm) and substitute the URL in line 26 before you run `make`.
-
-### Change the location
-
-We specify places of interest in the file `places.csv`. In line 59 of `Makefile`, we use those locations to query the database via the script `ucr_places.py`: 
-
-```
-output/suburb_crimes.csv : places.csv ucr_crime illinois_crosswalk identifiers_crosswalk
-    mkdir -p output
-    cat places.csv | python scripts/ucr_places.py $(PG_DB) > output/suburb
-```
-
-To work with different places, simply change `places.csv` to include only the places you're interested in before you run `make`. Make sure to follow the same schema (first column: placename, second column: FIPS code) so that `ucr_places.py` works properly. 
+To work with a report from a different year, find its corresponding UCR at the [State Police website](http://www.isp.state.il.us/crime/ucrhome.cfm) and try substituting the URL in line 26 before you run `make`. 

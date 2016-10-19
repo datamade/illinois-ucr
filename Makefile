@@ -12,9 +12,8 @@ SHELL := bash
 PG_DB = illinois_ucr
 CHECK_RELATION = psql -d $(PG_DB) -c "\d $@" > /dev/null 2>&1
 
-.PHONY: databases suburb_crimes
+.PHONY: database
 database : ucr_crime illinois_crosswalk identifiers_crosswalk
-crimes : output/suburb_crimes.csv
 
 # -----------------------------------------
 # Pull crime data for Illinois
@@ -53,7 +52,3 @@ illinois_crosswalk : joined_crosswalk.csv
 	$(CHECK_RELATION) || ( \
 	csvcut -c "NAME","COUNTYNAME","Agency","County" $< |\
         csvsql --db "postgresql:///$(PG_DB)" --table $@ --insert)
-
-output/suburb_crimes.csv : places.csv ucr_crime illinois_crosswalk identifiers_crosswalk
-	mkdir -p output
-	cat $< | python scripts/ucr_places.py $(PG_DB) > $@
