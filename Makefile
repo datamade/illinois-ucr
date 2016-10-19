@@ -38,6 +38,7 @@ ucr_crime : CrimeData_15_14.csv
 # -------------------------------------
 
 # raw data published online at <https://www.icpsr.umich.edu/icpsrweb/NACJD/studies/35158>
+.INTERMEDIATE: identifiers_crosswalk.csv
 identifiers_crosswalk.csv : raw/identifiers_crosswalk.tsv
 	csvformat -t $< | python scripts/clean_identifiers.py > $@ 
 
